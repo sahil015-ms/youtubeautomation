@@ -1,0 +1,331 @@
+<!doctype html>
+<html lang="hi"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>YT Auto Meta</title>
+<style>
+:root{--bg:#fff;--fg:#1a1a1a;--card:#f4f4f6;--mut:#666;--acc:#d32f2f}
+@media(prefers-color-scheme:dark){:root{--bg:#121214;--fg:#eee;--card:#1d1d21;--mut:#999}}
+*{box-sizing:border-box}body{margin:0;padding:14px;font:15px system-ui,sans-serif;background:var(--bg);color:var(--fg);max-width:720px;margin:auto}
+h1{font-size:20px;margin:6px 0 12px}
+button,select,input,textarea{font:inherit;padding:10px 12px;border-radius:10px;border:1px solid #8884;background:var(--card);color:var(--fg)}
+button{background:var(--acc);color:#fff;border:0;font-weight:600}button.alt{background:var(--card);color:var(--fg);border:1px solid #8884}
+.row{display:flex;gap:8px;flex-wrap:wrap;margin:8px 0;align-items:center}
+.card{background:var(--card);border-radius:12px;padding:12px;margin:10px 0}
+.old{color:var(--mut);text-decoration:line-through;font-size:13px}.new{font-weight:600}
+.st{font-size:12px;color:var(--mut)}small{color:var(--mut)}
+textarea{width:100%}
+.tabs{display:flex;gap:6px;overflow-x:auto;white-space:nowrap;padding-bottom:6px;margin:8px 0}.tabs button{flex:none;padding:8px 12px;font-size:14px}
+pre.out{white-space:pre-wrap;background:var(--card);padding:12px;border-radius:12px;font:inherit}
+</style></head><body>
+<h1>🎬 YouTube Auto Meta Editor</h1>
+<div class="tabs"><button class="alt" onclick="tab(1)">🛠 Metadata</button><button class="alt" onclick="tab(2)">📝 Script</button><button class="alt" onclick="tab(3)">💬 Comments</button><button class="alt" onclick="tab(4)">🖼 Thumbnail</button><button class="alt" onclick="tab(5)">📂 Playlists</button><button class="alt" onclick="tab(6)">⏰ Schedule</button><button class="alt" onclick="tab(7)">🎞 Shorts</button><button class="alt" onclick="tab(8)">📈 Trends</button><button class="alt" onclick="tab(9)">📊 Report</button><button class="alt" onclick="tab(10)">📱 Social</button><button class="alt" onclick="tab(11)">📄 SRT</button></div>
+<div id="t1">
+<div class="row"><button onclick="location='/api/login'">Google Login</button>
+<button class="alt" onclick="loadAll()">Videos load karo</button></div>
+<div id="info"><small>Pehle login karo, fir videos load karo.</small></div>
+
+<div class="row">
+<select id="lang"><option>Hinglish</option><option>Hindi</option><option>English</option></select>
+<select id="fields"><option value="all">Title + Description + Tags</option><option value="title">Sirf Title</option></select>
+<select id="mode"><option value="preview">Preview (check karke apply)</option><option value="auto">Full Auto (seedha apply)</option></select>
+</div>
+<textarea id="extra" rows="2" placeholder="Extra instruction (optional): jaise 'channel ka niche: cooking, title me emoji mat do'"></textarea>
+<div class="row">
+<input id="from" type="number" placeholder="Kaunse number se? (0 = shuru)" style="flex:1;min-width:150px">
+<input id="lim" type="number" placeholder="Kitne videos? (khali = sab)" style="flex:1;min-width:150px">
+<button onclick="start()">▶ Start AI</button>
+<button class="alt" onclick="stopIt=true">⏹ Stop</button>
+</div>
+<div class="row"><button class="alt" onclick="applyAll()">✅ Preview wale sab apply</button>
+<button class="alt" onclick="backup()">💾 Backup download</button></div>
+<div id="list"></div>
+
+</div>
+<div id="t2" style="display:none">
+<textarea id="sTopic" rows="2" placeholder="Video ka topic likho (jaise: 5 tarike paise bachane ke)"></textarea>
+<div class="row">
+<select id="sType"><option value="long">Long video</option><option value="short">Shorts</option></select>
+<select id="sLang"><option>Hinglish</option><option>Hindi</option><option>English</option></select>
+<select id="sTone"><option>engaging</option><option>funny</option><option>serious</option><option>educational</option><option>motivational</option></select>
+</div>
+<div class="row"><input id="sMin" type="number" placeholder="Long video kitne minute? (8)" style="flex:1"><input id="sAud" placeholder="Audience (optional)" style="flex:1"></div>
+<textarea id="sExtra" rows="2" placeholder="Extra instruction (optional)"></textarea>
+<div class="row"><button onclick="genScript()">✨ Script banao</button><button class="alt" onclick="copyS()">📋 Copy</button></div>
+<div id="sSt" class="st"></div>
+<pre id="sOut" style="white-space:pre-wrap;background:var(--card);padding:12px;border-radius:12px"></pre>
+</div>
+<div id="t3" style="display:none">
+<div class="row"><select id="cMode"><option value="preview">Preview (check karke bhejo)</option><option value="auto">Full Auto (seedha bhejo)</option></select>
+<select id="cLang"><option>Hinglish</option><option>Hindi</option><option>English</option></select><select id="cTone"><option>friendly</option><option>funny</option><option>professional</option></select></div>
+<input id="cNiche" placeholder="Channel ka niche (optional)" style="width:100%">
+<div class="row"><button onclick="cLoad()">💬 Naye comments laao</button><button class="alt" onclick="cApplyAll()">✅ Sab bhejo</button></div>
+<small>Ek baar me 20 comments. Reply/spam-hide har ek me 50 quota units lagta hai.</small>
+<div id="cSt" class="st"></div><div id="cList"></div></div>
+<div id="t4" style="display:none">
+<textarea id="thIn" rows="2" placeholder="Video ka title ya topic likho"></textarea>
+<div class="row"><select id="l_thumb"><option>Hinglish</option><option>Hindi</option><option>English</option></select><button onclick="runTool('thumb','thIn','thOut','thSt')">✨ Banao</button><button class="alt" onclick="copyEl('thOut')">📋 Copy</button></div>
+<div id="thSt" class="st"></div><pre id="thOut" class="out"></pre></div>
+<div id="t5" style="display:none">
+<div class="row"><button class="alt" onclick="pPlan()">🧠 AI se playlist plan</button></div>
+<textarea id="pNames" rows="6" placeholder="Playlist ke naam (ek line me ek). Plan ke baad edit kar sakte ho"></textarea>
+<div class="row"><input id="pFrom" type="number" placeholder="Kaunse number se? (0)" style="flex:1;min-width:140px"><input id="pLim" type="number" placeholder="Kitne videos? (50)" style="flex:1;min-width:140px"></div>
+<div class="row"><button onclick="pRun()">▶ Playlists me daalo</button><button class="alt" onclick="stopIt=true">⏹ Stop</button></div>
+<small>Har video playlist me add karne me 50 units lagte hain (800 videos = ~4 din quota).</small>
+<div id="pSt" class="st"></div></div>
+<div id="t6" style="display:none">
+<small>Sirf wo videos jo YouTube me <b>Private</b> upload hain, unko schedule karta hai. (Metadata tab me pehle videos load karo)</small>
+<div class="row"><input id="sStart" type="datetime-local" style="flex:1"></div>
+<div class="row"><input id="sPer" type="number" placeholder="Roz kitne videos? (1)" style="flex:1;min-width:140px"><input id="sGap" type="number" placeholder="Kitne din ke gap pe? (1)" style="flex:1;min-width:140px"></div>
+<div class="row"><select id="sOrder"><option value="old">Purane pehle</option><option value="new">Naye pehle</option></select><button onclick="sRun()">⏰ Schedule karo</button><button class="alt" onclick="stopIt=true">⏹ Stop</button></div>
+<div id="sList"></div></div>
+<div id="t7" style="display:none">
+<textarea id="shIn" rows="8" placeholder="Long video ka script ya transcript yahan paste karo"></textarea>
+<div class="row"><select id="l_shorts"><option>Hinglish</option><option>Hindi</option><option>English</option></select><button onclick="runTool('shorts','shIn','shOut','shSt')">✨ Banao</button><button class="alt" onclick="copyEl('shOut')">📋 Copy</button></div>
+<div id="shSt" class="st"></div><pre id="shOut" class="out"></pre></div>
+<div id="t8" style="display:none">
+<div class="row"><select id="tReg"><option value="IN">India</option><option value="US">USA</option><option value="GB">UK</option></select><select id="tLang"><option>Hinglish</option><option>Hindi</option><option>English</option></select></div>
+<input id="tNiche" placeholder="Aapke channel ka niche (jaise: cooking, tech)" style="width:100%;margin-bottom:8px">
+<input id="tKey" placeholder="Keyword (optional, 100 quota units lagte hain)" style="width:100%">
+<div class="row"><button onclick="tRun()">📈 Trends + ideas</button><button class="alt" onclick="copyEl('tOut')">📋 Copy</button></div>
+<div id="tSt" class="st"></div><pre id="tOut" class="out"></pre></div>
+<div id="t9" style="display:none">
+<small>Metadata tab me pehle videos load karo, fir report banao.</small>
+<div class="row"><select id="rLang"><option>Hinglish</option><option>Hindi</option><option>English</option></select><button onclick="rRun()">📊 Report banao</button><button class="alt" onclick="rTg()">✈ Telegram pe bhejo</button></div>
+<div id="rSt" class="st"></div><pre id="rOut" class="out"></pre></div>
+<div id="t10" style="display:none">
+<textarea id="soIn" rows="3" placeholder="Video ka title/topic/description likho (Instagram, Facebook, WhatsApp ke liye)"></textarea>
+<div class="row"><select id="l_social"><option>Hinglish</option><option>Hindi</option><option>English</option></select><button onclick="runTool('social','soIn','soOut','soSt')">✨ Banao</button><button class="alt" onclick="copyEl('soOut')">📋 Copy</button></div>
+<div id="soSt" class="st"></div><pre id="soOut" class="out"></pre></div>
+<div id="t11" style="display:none">
+<small>Script paste karo, timing ke saath .srt file banegi. YouTube Studio → Subtitles → Upload file se daal do. Timing approx hoti hai (bolne ki speed se), Studio me sync kar sakte ho.</small>
+<textarea id="srtIn" rows="8" placeholder="Video ka script paste karo"></textarea>
+<div class="row"><input id="srtWpm" type="number" placeholder="Bolne ki speed (words/min, 150)" style="flex:1"><button onclick="srtMake()">⬇ .srt download</button></div>
+<div id="srtSt" class="st"></div></div>
+<script>
+async function genScript(){
+  const b={topic:$('sTopic').value.trim(),lang:$('sLang').value,tone:$('sTone').value,minutes:+$('sMin').value||8,audience:$('sAud').value,extra:$('sExtra').value};
+  if(!b.topic)return alert('Pehle topic likho');
+  const out=$('sOut');out.textContent='';
+  try{
+    if($('sType').value==='short'){
+      $('sSt').textContent='Shorts script ban rahi hai...';
+      out.textContent=(await api('script',{...b,mode:'short'})).text;
+    }else{
+      $('sSt').textContent='Outline ban rahi hai...';
+      const o=await api('script',{...b,mode:'outline'});
+      out.textContent='TITLE IDEAS:\n- '+o.titles.join('\n- ')+'\n\n';
+      for(let i=0;i<o.sections.length;i++){
+        $('sSt').textContent='Section '+(i+1)+'/'+o.sections.length+' likh raha hai...';
+        const r=await api('script',{...b,mode:'section',outline:o,idx:i});
+        out.textContent+='=== '+(i+1)+'. '+o.sections[i].heading+' ===\n'+r.text+'\n\n';
+      }
+    }
+    $('sSt').textContent='✅ Script ready';
+  }catch(e){$('sSt').textContent='❌ '+(e.message=='login'?'Pehle Google Login karo (Metadata tab me)':e.message)}
+}
+function copyS(){navigator.clipboard.writeText($('sOut').textContent);$('sSt').textContent='📋 Copied'}
+</script>
+<script>
+let V=[],stopIt=false,NEW={};
+const $=id=>document.getElementById(id);
+async function api(p,body){
+  const r=await fetch('/api/'+p,body?{method:'POST',body:JSON.stringify(body)}:{});
+  const d=await r.json().catch(()=>({error:'bad response'}));
+  if(!r.ok)throw new Error(d.error||'error');return d;
+}
+async function loadAll(){
+  try{V=[];let t=null,ch='';
+  do{const d=await api('videos'+(t?'?pageToken='+t:''));ch=d.channel;V.push(...d.videos);t=d.next;
+    $('info').textContent=ch+': '+V.length+' videos load hue...';}while(t);
+  localStorage.setItem('yt_backup',JSON.stringify(V));render();
+  $('info').textContent='✅ '+ch+': '+V.length+' videos ready';
+  }catch(e){$('info').textContent='❌ '+(e.message=='login'?'Pehle Google Login karo':e.message)}
+}
+function render(){
+  $('list').innerHTML='';
+  V.forEach((v,i)=>{const c=document.createElement('div');c.className='card';c.id='c'+i;
+    c.innerHTML='<div class="old"></div><div class="new"></div><div class="st">pending</div>';
+    c.children[0].textContent=v.title;$('list').append(c);});
+}
+function setSt(i,t){document.querySelector('#c'+i+' .st').textContent=t}
+async function start(){
+  if(!V.length)return alert('Pehle videos load karo');
+  stopIt=false;const n=parseInt($('lim').value)||V.length;const from=parseInt($('from').value)||0;
+  for(let i=from;i<Math.min(from+n,V.length)&&!stopIt;i++){
+    const v=V[i];setSt(i,'AI likh raha hai...');
+    try{
+      const tOnly=$('fields').value==='title';
+      let r=await api('rewrite',{...v,lang:$('lang').value,extra:$('extra').value,titleOnly:tOnly});
+      if(tOnly)r={title:r.title,description:v.description,tags:v.tags};
+      document.querySelector('#c'+i+' .new').textContent=r.title;
+      if($('mode').value==='auto'){await api('apply',{id:v.id,categoryId:v.categoryId,defaultLanguage:v.defaultLanguage,...r});setSt(i,'✅ applied #'+i);$('from').value=i+1}
+      else{NEW[i]=r;setSt(i,'👀 preview ready');addEdit(i)}
+    }catch(e){setSt(i,'❌ '+e.message)}
+  }
+}
+function addEdit(i){
+  const c=$('c'+i),d=document.createElement('details');
+  d.innerHTML='<summary>description/tags dekho</summary><pre style="white-space:pre-wrap"></pre>';
+  d.querySelector('pre').textContent=NEW[i].description+'\n\nTags: '+NEW[i].tags.join(', ');
+  const b=document.createElement('button');b.className='alt';b.textContent='Skip';
+  b.onclick=()=>{delete NEW[i];setSt(i,'⏭ skipped')};
+  c.append(d,b);
+}
+async function applyAll(){
+  for(const i of Object.keys(NEW)){
+    try{setSt(i,'applying...');await api('apply',{id:V[i].id,categoryId:V[i].categoryId,defaultLanguage:V[i].defaultLanguage,...NEW[i]});setSt(i,'✅ applied');delete NEW[i]}
+    catch(e){setSt(i,'❌ '+e.message)}
+  }
+}
+function backup(){
+  const b=new Blob([localStorage.getItem('yt_backup')||'[]'],{type:'application/json'});
+  const a=document.createElement('a');a.href=URL.createObjectURL(b);a.download='yt-backup.json';a.click();
+}
+</script>
+<script>
+const TABS=11;
+function tab(n){for(let i=1;i<=TABS;i++){const e=$('t'+i);if(e)e.style.display=i==n?'':'none'}}
+function need(){if(!V.length){alert('Pehle Metadata tab me "Videos load karo" dabao');return false}return true}
+function copyEl(id){navigator.clipboard.writeText($(id).textContent)}
+const errTxt=e=>'❌ '+(e.message=='login'?'Pehle Google Login karo (Metadata tab me)':e.message);
+
+async function runTool(kind,inId,outId,stId){
+  const input=$(inId).value.trim();if(!input)return alert('Pehle input likho');
+  $(stId).textContent='AI likh raha hai...';$(outId).textContent='';
+  try{const r=await api('tool',{kind,input,lang:$('l_'+kind).value});$(outId).textContent=r.text;$(stId).textContent='✅ Ready'}
+  catch(e){$(stId).textContent=errTxt(e)}
+}
+
+/* ---- Comments ---- */
+let CM=[],CRES={};
+async function cLoad(){
+  $('cSt').textContent='Comments load ho rahe hain...';$('cList').innerHTML='';CM=[];CRES={};
+  try{
+    const d=await api('comments');CM=d.items.slice(0,20);
+    if(!CM.length){$('cSt').textContent='Koi naya unreplied comment nahi';return}
+    $('cSt').textContent='AI '+CM.length+' comments dekh raha hai...';
+    const r=await api('commentsAI',{items:CM,lang:$('cLang').value,tone:$('cTone').value,niche:$('cNiche').value});
+    for(const x of r.results){
+      const c=CM.find(m=>m.id===x.id);if(!c)continue;
+      CRES[x.id]=x;cCard(c,x);
+      if($('cMode').value==='auto')await cDo(c,x);
+    }
+    $('cSt').textContent='✅ Done';
+  }catch(e){$('cSt').textContent=errTxt(e)}
+}
+function cCard(c,x){
+  const d=document.createElement('div');d.className='card';
+  const t=document.createElement('div');t.innerHTML='<b></b><div></div>';
+  t.children[0].textContent=c.author;t.children[1].textContent=c.text;d.append(t);
+  const a=document.createElement('div');a.className='st';a.textContent='AI: '+x.action;d.append(a);x.st=a;
+  if(x.action==='reply'){const ta=document.createElement('textarea');ta.rows=2;ta.value=x.reply||'';ta.oninput=()=>x.reply=ta.value;d.append(ta)}
+  if(x.action!=='skip'){const b=document.createElement('button');b.textContent=x.action==='spam'?'Spam hata do':'Reply bhejo';b.onclick=()=>cDo(c,x);d.append(b)}
+  const s=document.createElement('button');s.className='alt';s.textContent='Skip';s.onclick=()=>{x.skip=true;a.textContent='⏭ skipped'};d.append(' ',s);
+  $('cList').append(d);
+}
+async function cDo(c,x){
+  if(x.done||x.skip||x.action==='skip')return;
+  try{x.st.textContent='bhej raha hai...';
+    if(x.action==='reply')await api('reply',{parentId:c.id,text:x.reply});else await api('moderate',{id:c.id});
+    x.done=true;x.st.textContent='✅ done'}
+  catch(e){x.st.textContent='❌ '+e.message}
+}
+async function cApplyAll(){for(const c of CM){const x=CRES[c.id];if(x)await cDo(c,x)}}
+
+/* ---- Playlists ---- */
+async function pPlan(){
+  if(!need())return;
+  $('pSt').textContent='AI plan bana raha hai...';
+  try{const r=await api('playlistsPlan',{titles:V.slice(0,150).map(v=>v.title)});
+    $('pNames').value=r.playlists.join('\n');$('pSt').textContent='✅ Plan ready, edit kar sakte ho'}
+  catch(e){$('pSt').textContent=errTxt(e)}
+}
+async function pRun(){
+  if(!need())return;
+  const names=$('pNames').value.split('\n').map(s=>s.trim()).filter(Boolean);
+  if(!names.length)return alert('Pehle playlist plan banao');
+  const from=parseInt($('pFrom').value)||0,end=Math.min(from+(parseInt($('pLim').value)||50),V.length);
+  stopIt=false;
+  try{
+    const ex=await api('myPlaylists');const pl={};ex.items.forEach(p=>pl[p.title]=p.id);
+    for(let s=from;s<end&&!stopIt;s+=40){
+      const chunk=V.slice(s,Math.min(s+40,end));
+      $('pSt').textContent='AI videos assign kar raha hai ('+s+')...';
+      const m=(await api('playlistsAssign',{names,items:chunk.map(v=>({id:v.id,title:v.title}))})).map;
+      for(let k=0;k<chunk.length&&!stopIt;k++){
+        const v=chunk[k],nm=m[v.id];if(!nm||!names.includes(nm))continue;
+        if(!pl[nm])pl[nm]=(await api('playlistCreate',{title:nm})).id;
+        await api('playlistAdd',{playlistId:pl[nm],videoId:v.id});
+        $('pSt').textContent='#'+(s+k)+' → '+nm;$('pFrom').value=s+k+1;
+      }
+    }
+    $('pSt').textContent=stopIt?'⏹ Ruka':'✅ Done';
+  }catch(e){$('pSt').textContent=errTxt(e)}
+}
+
+/* ---- Scheduler ---- */
+async function sRun(){
+  if(!need())return;
+  const list=V.filter(v=>v.status&&v.status.privacyStatus==='private'&&!v.status.publishAt);
+  if(!list.length)return alert('Koi private (unscheduled) video nahi mila');
+  if($('sOrder').value==='old')list.reverse();
+  const start=new Date($('sStart').value);
+  if(isNaN(start)||start<=new Date())return alert('Future ki date-time chuno');
+  const per=parseInt($('sPer').value)||1,gap=parseInt($('sGap').value)||1;
+  $('sList').innerHTML='';stopIt=false;
+  for(let i=0;i<list.length&&!stopIt;i++){
+    const v=list[i],when=new Date(start.getTime()+Math.floor(i/per)*gap*864e5+(i%per)*3*36e5);
+    const row=document.createElement('div');row.className='card';row.textContent=v.title+' → '+when.toLocaleString()+' ';$('sList').append(row);
+    try{await api('schedule',{id:v.id,publishAt:when.toISOString(),status:v.status});row.textContent+='✅'}
+    catch(e){row.textContent+='❌ '+e.message}
+  }
+}
+
+/* ---- Trends ---- */
+async function tRun(){
+  $('tSt').textContent='Trends la raha hai...';$('tOut').textContent='';
+  try{const r=await api('trends',{region:$('tReg').value,niche:$('tNiche').value,keyword:$('tKey').value.trim(),lang:$('tLang').value});
+    $('tOut').textContent='TRENDING VIDEOS:\n- '+r.titles.join('\n- ')+'\n\nVIDEO IDEAS:\n'+r.ideas;$('tSt').textContent='✅ Ready'}
+  catch(e){$('tSt').textContent=errTxt(e)}
+}
+
+/* ---- Report ---- */
+let RTXT='';
+async function rRun(){
+  if(!need())return;
+  const s=[...V].sort((a,b)=>b.views-a.views);
+  const line=v=>v.title+' | '+v.views+' views | '+v.likes+' likes | '+v.commentsCount+' comments | '+(v.publishedAt||'').slice(0,10);
+  const total=V.reduce((a,v)=>a+v.views,0);
+  $('rSt').textContent='AI report bana raha hai...';
+  try{const r=await api('report',{total,count:V.length,top:s.slice(0,10).map(line),bottom:s.slice(-5).map(line),lang:$('rLang').value});
+    RTXT='📊 Channel Report\nVideos: '+V.length+' | Total views: '+total+'\n\n'+r.text;
+    $('rOut').textContent=RTXT;$('rSt').textContent='✅ Ready'}
+  catch(e){$('rSt').textContent=errTxt(e)}
+}
+async function rTg(){
+  if(!RTXT)return alert('Pehle report banao');
+  try{await api('telegram',{text:RTXT});$('rSt').textContent='✅ Telegram pe gaya'}
+  catch(e){$('rSt').textContent=errTxt(e)}
+}
+
+/* ---- SRT (browser me, AI nahi) ---- */
+function srtMake(){
+  const raw=$('srtIn').value.trim();if(!raw)return alert('Pehle script paste karo');
+  const spw=60/(parseInt($('srtWpm').value)||150);
+  const words=raw.replace(/\[[^\]]*\]/g,' ').replace(/\s+/g,' ').split(' ').filter(Boolean);
+  const p=(n,l=2)=>String(n).padStart(l,'0');
+  const fmt=x=>p(Math.floor(x/3600))+':'+p(Math.floor(x%3600/60))+':'+p(Math.floor(x%60))+','+p(Math.round((x%1)*999),3);
+  let t=0,i=1,out='';
+  for(let k=0;k<words.length;){
+    let n=0,len=0;
+    while(k+n<words.length&&n<9&&len+words[k+n].length<=40){len+=words[k+n].length+1;n++;if(/[.!?।]$/.test(words[k+n-1]))break}
+    if(n===0)n=1;
+    const d=Math.max(1,n*spw);
+    out+=(i++)+'\n'+fmt(t)+' --> '+fmt(t+d)+'\n'+words.slice(k,k+n).join(' ')+'\n\n';
+    t+=d;k+=n;
+  }
+  const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([out],{type:'text/plain'}));a.download='captions.srt';a.click();
+  $('srtSt').textContent='✅ '+(i-1)+' lines ka .srt download hua';
+}
+</script>
+</body></html>
